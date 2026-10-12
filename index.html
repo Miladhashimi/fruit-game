@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>سبد میوه</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;800&display=swap" rel="stylesheet">
+<style>
+:root{--sky1:#1b2a49;--sky2:#34507a;--ink:#fdf6e3;--hot:#ff6f59;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--sky1);color:var(--ink);font-family:Vazirmatn,Tahoma,sans-serif;overflow:hidden;touch-action:none;user-select:none}
+#wrap{position:relative;height:100%;max-width:520px;margin:0 auto;background:linear-gradient(var(--sky1),var(--sky2))}
+canvas{display:block;width:100%;height:100%}
+#hud{position:absolute;top:10px;left:14px;right:14px;display:flex;justify-content:space-between;font-weight:800;font-size:20px;pointer-events:none}
+#menu{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(20,30,55,.86);text-align:center;padding:24px}
+#menu h1{font-size:40px;margin:0}
+#menu p{margin:0;font-size:16px;line-height:1.9;max-width:300px}
+button{font:inherit;font-weight:800;font-size:20px;background:var(--hot);color:#fff;border:0;border-radius:14px;padding:12px 36px;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div id="hud"><span id="sc">امتیاز: ۰</span><span id="lv">❤️❤️❤️</span></div>
+  <div id="menu">
+    <h1>🧺 سبد میوه</h1>
+    <p id="msg">سبد رو با انگشت حرکت بده و میوه‌ها رو بگیر.<br>به 💣 نخور!</p>
+    <button id="go">شروع بازی</button>
+  </div>
+</div>
+<script>
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const sc=document.getElementById('sc'),lv=document.getElementById('lv'),menu=document.getElementById('menu'),msg=document.getElementById('msg');
+const fa=n=>String(n).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
+const FRUITS=['🍎','🍊','🍉','🍇','🍓','🍐'];
+let W,H,dpr,basket,items,score,lives,running,last,spawn,best=0;
+try{best=+localStorage.getItem('fruit-best')||0}catch(e){}
+if(best)msg.innerHTML+='<br>بهترین امتیاز: '+fa(best);
+function resize(){dpr=window.devicePixelRatio||1;W=cv.clientWidth;H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}
+addEventListener('resize',resize);resize();
+function reset(){basket={x:W/2,w:90,h:34};items=[];score=0;lives=3;spawn=0;sc.textContent='امتیاز: ۰';lv.textContent='❤️❤️❤️'}
+function move(e){const t=e.touches?e.touches[0]:e;const r=cv.getBoundingClientRect();basket.x=Math.max(basket.w/2,Math.min(W-basket.w/2,t.clientX-r.left))}
+['pointermove','pointerdown'].forEach(n=>cv.addEventListener(n,e=>{if(running)move(e)}));
+addEventListener('keydown',e=>{if(!running)return;if(e.key==='ArrowLeft')basket.x=Math.max(basket.w/2,basket.x-30);if(e.key==='ArrowRight')basket.x=Math.min(W-basket.w/2,basket.x+30)});
+function add(){const bomb=Math.random()<0.2;items.push({x:24+Math.random()*(W-48),y:-30,v:120+score*3+Math.random()*80,e:bomb?'💣':FRUITS[Math.random()*FRUITS.length|0],bomb})}
+function hurt(){lives--;lv.textContent='❤️'.repeat(Math.max(lives,0))||'💔';if(lives<=0)end()}
+function end(){running=false;best=Math.max(best,score);try{localStorage.setItem('fruit-best',best)}catch(e){}msg.innerHTML='باختی! امتیاز تو: '+fa(score)+'<br>بهترین امتیاز: '+fa(best);document.getElementById('go').textContent='دوباره';menu.style.display='flex'}
+function loop(t){if(!running)return;const dt=Math.min((t-last)/1000,.05);last=t;
+  spawn-=dt;if(spawn<=0){add();spawn=Math.max(.35,.9-score*.01)}
+  const by=H-basket.h-24;
+  for(let i=items.length-1;i>=0;i--){const it=items[i];it.y+=it.v*dt;
+    if(it.y>by-10&&it.y<by+basket.h&&Math.abs(it.x-basket.x)<basket.w/2+10){
+      if(it.bomb)hurt();else{score++;sc.textContent='امتیاز: '+fa(score)}
+      items.splice(i,1);continue}
+    if(it.y>H+20){if(!it.bomb)hurt();items.splice(i,1)}}
+  ctx.clearRect(0,0,W,H);ctx.font='34px serif';ctx.textAlign='center';
+  items.forEach(it=>ctx.fillText(it.e,it.x,it.y));
+  ctx.fillStyle='#c98b4e';ctx.beginPath();ctx.roundRect(basket.x-basket.w/2,by,basket.w,basket.h,[4,4,16,16]);ctx.fill();
+  ctx.fillStyle='#a56d34';ctx.fillRect(basket.x-basket.w/2,by,basket.w,6);
+  requestAnimationFrame(loop)}
+document.getElementById('go').onclick=()=>{reset();menu.style.display='none';running=true;last=performance.now();requestAnimationFrame(loop)};
+</script>
+</body>
+</html>
